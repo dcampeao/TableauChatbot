@@ -55,8 +55,6 @@ with gr.Blocks() as demo:
 
     def bot(history):
         global message_history
-        #print(message_history)
-        #print(history)
         message = history[-1][0]
         message_history.append({"role":"user", "content":message})
         completion = client.chat.completions.create(
@@ -71,16 +69,25 @@ with gr.Blocks() as demo:
     def update_dashboard(history):
         global html
         chatbot_response = history[-1][1]
+        filter_strings = []
         for part in chatbot_response.split():
             if 'public.tableau.com' in part:
                 url = re.search(regex, part).group("url")
-                print('url: ', url)
+                tableau_url_list = url.split('?')
+                tableau_url = tableau_url_list[0]
+                if len(tableau_url_list) > 1:
+                    for filter in tableau_url_list[1].split('&'):
+                        field = filter.split('=')[0].replace('%20',' ').replace('%2F','/').strip()
+                        value = filter.split('=')[1].replace('%20',' ').replace('%2F','/').strip()
+                        filter_strings.append('<viz-filter field="{field}" value="{value}"> </viz-filter>'.format(field=field,value=value))
+                all_filters = '\n'.join(filter_strings)
                 html = '''
-                <div class="tableauPlaceholder"">
-                    <tableau-viz id="tableauViz" src='{url}' toolbar="bottom" hide-tabs>
+                <div class="tableauPlaceholder">
+                    <tableau-viz id="tableauViz" src='{tableau_url}' toolbar="bottom" hide-tabs>
+                    {all_filters}
                     </tableau-viz>
                 </div>
-                '''.format(url=url)
+                '''.format(tableau_url=tableau_url,all_filters=all_filters)
                 break
         if html:
             return html
