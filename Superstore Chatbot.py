@@ -9,38 +9,39 @@ dbutils.library.restartPython()
 # COMMAND ----------
 
 from openai import OpenAI
-client = OpenAI(api_key="",)
-
-# COMMAND ----------
-
 import gradio as gr
 import re
+import json
+
+# Regex to get the url from the model response
 regex = "(?P<url>(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-]))"
+
+# Config data
+# Path to config file
+config_file_path = "/Workspace/Chatbot/TableauChatbot/config.json"
+with open(config_file_path,'r') as cfile:
+    config = json.load(cfile)
+
+client = OpenAI(api_key=config['OpenAIkey'],)
+
 initial_prompt = '''
-I have Tableau dashboards with the following characteristics: [{'Name':'Profitability Overview', 
-                                                                'Description':"Has information about a Supertore in United States including cards for: total sales, total profit, profit ratio, profit per order, profit per custumer, average discount and quantity. It also has a map showing for each unit a circle where it's size corresponds to the profit/loss and the color is blue if the profit ratio is positive and orange if it's negative. It has charts for Monthly Sales by segment and monthly sales by product category. It is possible to filter it by Order Date, Region (Central, East, South and West), State (All US States) and Profit Ratio.",
-                                                                'url': 'https://public.tableau.com/views/Superstore_embedded_800x800/Overview'},
-                                                                {'Name':'Product Drilldown', 
-                                                                'Description': "It has a heatmap table where columns are calendar months and the rows are 2 index with product categories (Furniture, Office Supplies and Technology) and years. The values on the table are total sales. It also has a chart with the horizontal axis representing the total sales as dots, and 3 columns for the segment (Cosumer, Corporate and Home Office). The vertical axis has the product category and type of product. It is possible to filter it by Order Date, Region (Central, East, South and West), State (All US States), Profit and Profit Ratio.",
-                                                                'url': 'https://public.tableau.com/views/Superstore_embedded_800x800/Product'},
-                                                                {'Name':'On-Time Shipment Trends', 
-                                                                'Description':"It shows the percentage or shippments late, on time and early. It also shows the number of days to ship by product in a gant chart where the horizontal axis is dates and the horizontal axis is the products. It is possible to filter it by Order Year, Order Quarter, Region and Ship Mode.",
-                                                                'url': 'https://public.tableau.com/views/Superstore_embedded_800x800/Shipping'},
-                                                                {'Name':'Sales Performance vs Target', 
-                                                                 'Description':"It has a bar chart with the total sales for each procudt category as columns and a 2 index row with calendar month and segment. The bars are green when the sales are above target and orange when the sales are below target. It can be filtered by Year and Quarter.",
-                                                                 'url': 'https://public.tableau.com/views/Superstore_embedded_800x800/Performance'},},
-                                                                {'Name':'Order Details', 
-                                                                 'Description':"It has a table at order level detail containing customer name, order date, ship date, ship mode, sale value, quantity, total profit, profit ratio, days to ship sheduled and actual. It can be filtered by Order Date, Region, State, City, Category and Segment.",
-                                                                 'url': 'https://public.tableau.com/views/Superstore_embedded_800x800/OrderDetails'},},
-                                                                ].
+I have Tableau dashboards with the following characteristics: {dashboards_tabs_data}.
 Based on the descriptions, respond the next prompt with the dashboard that most likely have the information requested. Make sure to include the url in your response so the user can access it but not as a link. If the region or state is mentioned in the question, add '?Region=Central' or '?State=California' to the url so the view can be filtered properly.
-'''
+Make sure to include the url in your response so the user can access it but not as a link. If the region or state is mentioned in the question, add '?Region=Central' or '?State=California' to the url so the view can be filtered properly.
+'''.format(dashboards_tabs_data=config['DashboardsTabs'])
 
 message_history = [{"role": "user", "content":initial_prompt},{"role":"assistant", "content": 'Ok'}]
 
 html = None
 
 with gr.Blocks() as demo:
+    gr.Markdown(
+        """
+        # Tableau Dashboard Chatbot
+        Use natural language to find and access relevant Tableau dashboards.
+        This demo uses the Public Superstore Dashboard as an example, so you can ask about profits, sales, shippings, orders, etc.
+        """
+    )
     with gr.Row() as row:
         with gr.Column(scale=1) as col:
             chatbot = gr.Chatbot()
@@ -122,7 +123,3 @@ with gr.Blocks() as demo:
 demo.queue()
 #demo.launch()
 demo.launch(share=True)
-
-# COMMAND ----------
-
-
